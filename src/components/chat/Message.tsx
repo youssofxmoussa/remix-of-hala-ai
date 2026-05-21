@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Copy, Check, RotateCcw } from "lucide-react";
+import { Copy, Check, RotateCcw, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Markdown } from "./Markdown";
 import type { ChatMessage } from "./types";
 
@@ -29,13 +29,13 @@ export function UserMessage({ m }: { m: ChatMessage }) {
   );
 }
 
-// Smoothly reveal content. While `streaming` is true (waiting on API), we just
-// hold the empty content. Once content arrives, we ease it in char by char.
-function useTypewriter(content: string, enabled: boolean) {
+function useTypewriter(content: string, enabled: boolean, onTick?: () => void) {
   const [shown, setShown] = useState(enabled ? "" : content);
   const idxRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef(0);
+  const tickRef = useRef(onTick);
+  tickRef.current = onTick;
 
   useEffect(() => {
     if (!enabled) {
@@ -43,7 +43,6 @@ function useTypewriter(content: string, enabled: boolean) {
       idxRef.current = content.length;
       return;
     }
-    // If content shrank (regenerate), reset.
     if (idxRef.current > content.length) {
       idxRef.current = 0;
       setShown("");
@@ -58,12 +57,12 @@ function useTypewriter(content: string, enabled: boolean) {
         rafRef.current = null;
         return;
       }
-      // Adaptive speed: faster when far behind, smooth when close.
-      const baseCps = 90; // chars per second
+      const baseCps = 90;
       const boost = Math.min(8, 1 + remaining / 80);
       const inc = Math.max(1, Math.round((dt / 1000) * baseCps * boost));
       idxRef.current = Math.min(content.length, idxRef.current + inc);
       setShown(content.slice(0, idxRef.current));
+      tickRef.current?.();
       rafRef.current = requestAnimationFrame(step);
     };
 
@@ -92,7 +91,15 @@ export function AssistantMessage({
   onRegenerate?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const { shown, isTyping } = useTypewriter(m.content, true);
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  const scrollToEnd = () => {
+    anchorRef.current?.scrollIntoView({ block: "end" });
+  };
+
+  const { shown, isTyping } = useTypewriter(m.content, true, scrollToEnd);
+
   const copy = async () => {
     await navigator.clipboard.writeText(m.content);
     setCopied(true);
@@ -103,17 +110,14 @@ export function AssistantMessage({
 
   return (
     <div className="w-full animate-rise">
-      <div className={isTyping || streaming ? "cursor-blink" : ""}>
-        {showThinking ? (
-          <div className="flex gap-1.5 py-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-foreground/60" style={{ animationDelay: "0ms" }} />
-            <span className="h-2 w-2 animate-pulse rounded-full bg-foreground/60" style={{ animationDelay: "150ms" }} />
-            <span className="h-2 w-2 animate-pulse rounded-full bg-foreground/60" style={{ animationDelay: "300ms" }} />
-          </div>
-        ) : (
-          <Markdown content={shown} />
-        )}
-      </div>
+      {showThinking ? (
+        <div className="py-2">
+          <span className="block h-2.5 w-2.5 rounded-full bg-foreground animate-pulse-dot" />
+        </div>
+      ) : (
+        <Markdown content={shown} />
+      )}
+      <div ref={anchorRef} />
       {!streaming && !isTyping && m.content && (
         <div className="mt-2 flex items-center gap-1 text-muted-foreground">
           <button
@@ -132,6 +136,26 @@ export function AssistantMessage({
               <RotateCcw size={13} />
             </button>
           )}
+          <button
+            onClick={() => setFeedback((f) => (f === "up" ? null : "up"))}
+            className={`inline-flex items-center gap-1 rounded-lg p-1.5 text-xs transition hover:bg-accent hover:text-foreground ${
+              feedback === "up" ? "text-foreground" : ""
+            }`}
+            aria-label="Good response"
+            aria-pressed={feedback === "up"}
+          >
+            <ThumbsUp size={13} fill={feedback === "up" ? "currentColor" : "none"} />
+          </button>
+          <button
+            onClick={() => setFeedback((f) => (f === "down" ? null : "down"))}
+            className={`inline-flex items-center gap-1 rounded-lg p-1.5 text-xs transition hover:bg-accent hover:text-foreground ${
+              feedback === "down" ? "text-foreground" : ""
+            }`}
+            aria-label="Bad response"
+            aria-pressed={feedback === "down"}
+          >
+            <ThumbsDown size={13} fill={feedback === "down" ? "currentColor" : "none"} />
+          </button>
         </div>
       )}
     </div>
