@@ -10,8 +10,15 @@ type Props = {
 
 export function ChatView({ messages, loading, onRegenerate }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(false);
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    // First mount (e.g. switching to a loaded chat) jumps instantly; subsequent
+    // updates (streaming) glide smoothly.
+    endRef.current?.scrollIntoView({
+      behavior: mountedRef.current ? "smooth" : "auto",
+      block: "end",
+    });
+    mountedRef.current = true;
   }, [messages, loading]);
 
   return (

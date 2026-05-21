@@ -10,13 +10,28 @@ type Props = {
 
 const MAX_IMAGES = 5;
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return await new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
+async function fileToCompressedDataUrl(file: File, maxDim = 1280, quality = 0.82): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas unsupported");
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function Composer({ onSend, loading, onStop }: Props) {
@@ -38,7 +53,11 @@ export function Composer({ onSend, loading, onStop }: Props) {
     const next: ChatImage[] = [];
     for (const f of Array.from(files)) {
       if (!f.type.startsWith("image/")) continue;
-      next.push({ dataUrl: await fileToDataUrl(f), name: f.name });
+      try {
+        next.push({ dataUrl: await fileToCompressedDataUrl(f), name: f.name });
+      } catch {
+        // skip unreadable image
+      }
     }
     setImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES));
   };
