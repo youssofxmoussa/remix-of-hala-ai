@@ -162,3 +162,10 @@
   animation: blink 1s steps(2, start) infinite;
   color: var(--color-foreground);
 }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(0.75); }
+}
+.animate-pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+

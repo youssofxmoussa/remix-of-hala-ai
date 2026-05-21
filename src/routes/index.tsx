@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, SquarePen, ChevronDown, Share2 } from "lucide-react";
+import { PanelLeft, SquarePen } from "lucide-react";
 import logoUrl from "@/assets/halagpt-logo.png";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
@@ -292,21 +292,13 @@ function HalaGPT() {
               </button>
             </div>
 
-            <button
-              className="group inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition hover:bg-accent"
-              aria-label="HALA GPT model"
-            >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5">
               <img src={logoUrl} alt="HALA GPT" className="h-5 w-5" />
               <span className="text-[15px] font-semibold tracking-tight">HALA GPT</span>
-              <ChevronDown size={14} className="text-muted-foreground transition group-hover:text-foreground" />
-            </button>
+            </div>
 
-            <button
-              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-foreground"
-              aria-label="Share"
-            >
-              <Share2 size={16} />
-            </button>
+            <div className="h-9 w-9" aria-hidden />
+
           </div>
         </header>
 
