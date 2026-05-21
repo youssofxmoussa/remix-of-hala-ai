@@ -201,14 +201,59 @@ function HalaGPT() {
 
   const regenerate = async () => {
     if (!active || loading) return;
+    const targetId = active.id;
     const msgs = [...active.messages];
-    // drop trailing assistant
+    // remove trailing assistant message(s) — keep the same user question
     while (msgs.length && msgs[msgs.length - 1].role === "assistant") msgs.pop();
-    if (msgs.length === 0) return;
-    const last = msgs[msgs.length - 1];
-    if (last.role !== "user") return;
-    updateActive((c) => ({ ...c, messages: msgs }));
-    await send(last.content, last.images ?? []);
+    if (msgs.length === 0 || msgs[msgs.length - 1].role !== "user") return;
+
+    const placeholder: ChatMessage = {
+      id: uid(),
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+    };
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === targetId
+          ? { ...c, messages: [...msgs, placeholder], updatedAt: Date.now() }
+          : c,
+      ),
+    );
+
+    setLoading(true);
+    try {
+      const reply = await callApi(msgs);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === targetId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === placeholder.id ? { ...m, content: reply } : m,
+                ),
+                updatedAt: Date.now(),
+              }
+            : c,
+        ),
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error";
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === targetId
+            ? {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m,
+                ),
+              }
+            : c,
+        ),
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
