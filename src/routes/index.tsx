@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, SquarePen, ChevronDown, Share } from "lucide-react";
+import { PanelLeft, SquarePen, ChevronDown, Share2 } from "lucide-react";
 import logoUrl from "@/assets/halagpt-logo.png";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
@@ -271,46 +271,45 @@ function HalaGPT() {
         onToggle={() => setSidebarOpen((o) => !o)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-3 py-2.5 backdrop-blur-xl">
-          <div className="flex items-center gap-1">
-            {!sidebarOpen && (
-              <>
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                  aria-label="Open sidebar"
-                >
-                  <PanelLeft size={18} />
-                </button>
-                <button
-                  onClick={newChat}
-                  className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-                  aria-label="New chat"
-                >
-                  <SquarePen size={18} />
-                </button>
-              </>
-            )}
+        <header className="sticky top-0 z-20 px-3 pt-3 pb-2">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 rounded-full border border-border bg-background/70 px-2 py-1.5 shadow-[0_1px_0_0_oklch(0.96_0_0)_inset,0_8px_30px_-18px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSidebarOpen((o) => !o)}
+                className={`grid h-9 w-9 place-items-center rounded-full transition-all duration-300 ${
+                  sidebarOpen
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+                aria-label="Toggle sidebar"
+                aria-pressed={sidebarOpen}
+              >
+                <PanelLeft size={17} />
+              </button>
+              <button
+                onClick={newChat}
+                className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-foreground"
+                aria-label="New chat"
+              >
+                <SquarePen size={17} />
+              </button>
+            </div>
+
             <button
-              className="group ml-1 inline-flex items-center gap-1.5 rounded-2xl px-3 py-1.5 text-[15px] font-semibold tracking-tight hover:bg-accent transition"
-              aria-label="Model selector"
+              className="group inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition hover:bg-accent"
+              aria-label="HALA GPT model"
             >
               <img src={logoUrl} alt="HALA GPT" className="h-5 w-5" />
-              <span>HALA GPT</span>
-              <ChevronDown size={15} className="mt-0.5 text-muted-foreground transition group-hover:text-foreground" />
+              <span className="text-[15px] font-semibold tracking-tight">HALA GPT</span>
+              <ChevronDown size={14} className="text-muted-foreground transition group-hover:text-foreground" />
             </button>
-          </div>
-          <div className="flex items-center gap-1.5">
+
             <button
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm font-medium text-foreground hover:bg-accent transition shadow-sm"
+              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-all duration-300 hover:bg-accent hover:text-foreground"
               aria-label="Share"
             >
-              <Share size={14} strokeWidth={2.25} />
-              <span className="hidden sm:inline">Share</span>
+              <Share2 size={16} />
             </button>
-            <div className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-foreground text-background text-xs font-semibold">
-              H
-            </div>
           </div>
         </header>
 
