@@ -62,13 +62,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#ffffff" },
-      { title: "HALA GPT — Luxe AI Assistant" },
+      { title: "HALA GPT" },
       {
         name: "description",
         content:
-          "HALA GPT — a refined, minimal AI assistant with vision, image OCR, math, code, and beautifully rendered markdown.",
+          "HALA GPT — Palestinian AI",
       },
-      { name: "keywords", content: "HALA GPT, AI assistant, chat AI, image OCR, vision AI, markdown chat, luxe AI" },
+      { name: "keywords", content: "HALA GPT, AI assistant, chat AI, image OCR, vision AI, luxe AI" },
       { name: "author", content: "HALA GPT" },
       { name: "robots", content: "index, follow" },
       { property: "og:site_name", content: "HALA GPT" },
