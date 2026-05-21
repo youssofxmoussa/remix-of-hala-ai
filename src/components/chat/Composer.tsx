@@ -157,7 +157,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
               disabled={images.length >= MAX_IMAGES}
               className={`group grid h-9 w-9 place-items-center rounded-full border transition disabled:opacity-40 disabled:cursor-not-allowed ${
                 luxe
-                  ? "border-white/20 bg-white/10 text-white hover:bg-white hover:text-[oklch(0.15_0.02_270)]"
+                  ? "border-white/25 bg-transparent text-white hover:bg-white hover:text-black"
                   : "border-border bg-background text-foreground hover:bg-foreground hover:text-background hover:border-foreground"
               }`}
               aria-label="Attach image"
