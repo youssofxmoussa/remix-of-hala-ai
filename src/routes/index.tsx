@@ -69,9 +69,6 @@ function HalaGPT() {
     [conversations, activeId],
   );
 
-  const updateActive = (updater: (c: Conversation) => Conversation) => {
-    setConversations((prev) => prev.map((c) => (c.id === activeId ? updater(c) : c)));
-  };
 
   const newChat = () => {
     const c: Conversation = {
