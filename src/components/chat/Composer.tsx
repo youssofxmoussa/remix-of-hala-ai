@@ -143,7 +143,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             }
           }}
           rows={1}
-          placeholder={luxe ? "Whisper to HALA…" : "Ask HALA anything…"}
+          placeholder={luxe ? "Temporary HALA" : "Ask HALA anything…"}
           className={`block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none ${
             luxe ? "placeholder:text-white/40" : "placeholder:text-muted-foreground"
           }`}
