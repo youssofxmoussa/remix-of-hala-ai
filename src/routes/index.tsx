@@ -338,16 +338,10 @@ function HalaGPT() {
           </button>
         </div>
 
-        {/* Luxe whisper for temporary mode (no logo/text in normal mode) */}
+        {/* Temporary chat title — just the name, nothing else */}
         {isEmpty && temporary && (
-          <div className="pointer-events-none absolute inset-x-0 top-[22vh] z-0 flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-[12px] font-medium tracking-[0.18em] uppercase text-white/80 backdrop-blur-xl">
-              <Sparkles size={13} /> Temporary
-            </div>
-            <h2 className="mt-4 bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-[28px] font-semibold tracking-tight text-transparent">
-              A private moment with HALA
-            </h2>
-            <p className="mt-2 text-[13px] text-white/55">Nothing here is saved. Speak freely.</p>
+          <div className="pointer-events-none absolute inset-x-0 top-[24vh] z-0 flex justify-center">
+            <h2 className="text-[24px] font-medium tracking-tight text-white/90">Temporary HALA</h2>
           </div>
         )}
 
