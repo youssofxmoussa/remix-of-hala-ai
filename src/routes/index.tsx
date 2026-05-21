@@ -283,13 +283,9 @@ function HalaGPT() {
         temporary ? "hala-temp" : "bg-background"
       }`}
     >
-      {/* Luxe temporary-chat ambient layer */}
+      {/* Pure incognito ambient layer */}
       {temporary && (
-        <>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.22_0.04_280)_0%,oklch(0.12_0.02_270)_45%,oklch(0.06_0.01_260)_100%)]" />
-          <div className="pointer-events-none absolute -top-32 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[oklch(0.55_0.18_300/0.25)] blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[oklch(0.55_0.16_220/0.18)] blur-3xl" />
-        </>
+        <div className="pointer-events-none absolute inset-0 bg-black" />
       )}
 
       <Sidebar
