@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, MessageSquareDashed, Sparkles } from "lucide-react";
+import { PanelLeft, MessageSquareDashed } from "lucide-react";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
@@ -280,16 +280,12 @@ function HalaGPT() {
   return (
     <div
       className={`relative flex h-dvh w-full overflow-hidden text-foreground transition-colors duration-500 ${
-        temporary ? "hala-temp" : "bg-background"
+        temporary ? "bg-black" : "bg-background"
       }`}
     >
-      {/* Luxe temporary-chat ambient layer */}
+      {/* Pure incognito ambient layer */}
       {temporary && (
-        <>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.22_0.04_280)_0%,oklch(0.12_0.02_270)_45%,oklch(0.06_0.01_260)_100%)]" />
-          <div className="pointer-events-none absolute -top-32 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[oklch(0.55_0.18_300/0.25)] blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[oklch(0.55_0.16_220/0.18)] blur-3xl" />
-        </>
+        <div className="pointer-events-none absolute inset-0 bg-black" />
       )}
 
       <Sidebar
@@ -331,7 +327,7 @@ function HalaGPT() {
             }}
             className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
               temporary
-                ? "border-white/30 bg-white text-[oklch(0.15_0.02_270)]"
+                ? "border-white/30 bg-white text-[#000]"
                 : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
             }`}
             aria-label="Temporary chat"
@@ -342,16 +338,10 @@ function HalaGPT() {
           </button>
         </div>
 
-        {/* Luxe whisper for temporary mode (no logo/text in normal mode) */}
+        {/* Temporary chat title — just the name, nothing else */}
         {isEmpty && temporary && (
-          <div className="pointer-events-none absolute inset-x-0 top-[22vh] z-0 flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-[12px] font-medium tracking-[0.18em] uppercase text-white/80 backdrop-blur-xl">
-              <Sparkles size={13} /> Temporary
-            </div>
-            <h2 className="mt-4 bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-[28px] font-semibold tracking-tight text-transparent">
-              A private moment with HALA
-            </h2>
-            <p className="mt-2 text-[13px] text-white/55">Nothing here is saved. Speak freely.</p>
+          <div className="pointer-events-none absolute inset-x-0 top-[24vh] z-0 flex justify-center">
+            <h2 className="text-[24px] font-medium tracking-tight text-white/90">Temporary HALA</h2>
           </div>
         )}
 

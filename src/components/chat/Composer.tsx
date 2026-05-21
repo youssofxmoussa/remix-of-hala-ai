@@ -87,7 +87,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
         }}
         className={`relative rounded-[28px] border transition ${
           luxe
-            ? "border-white/15 bg-white/[0.06] text-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)] backdrop-blur-2xl focus-within:border-white/30"
+            ? "border-white/20 bg-white/[0.04] text-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl focus-within:border-white/40"
             : "border-border bg-background text-foreground shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] focus-within:border-foreground/30"
         } ${dragOver ? (luxe ? "ring-4 ring-white/15" : "border-foreground/60 ring-4 ring-foreground/5") : ""}`}
       >
@@ -143,7 +143,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             }
           }}
           rows={1}
-          placeholder={luxe ? "Whisper to HALA…" : "Ask HALA anything…"}
+          placeholder={luxe ? "Temporary HALA" : "Ask HALA anything…"}
           className={`block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none ${
             luxe ? "placeholder:text-white/40" : "placeholder:text-muted-foreground"
           }`}
@@ -157,7 +157,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
               disabled={images.length >= MAX_IMAGES}
               className={`group grid h-9 w-9 place-items-center rounded-full border transition disabled:opacity-40 disabled:cursor-not-allowed ${
                 luxe
-                  ? "border-white/20 bg-white/10 text-white hover:bg-white hover:text-[oklch(0.15_0.02_270)]"
+                  ? "border-white/25 bg-transparent text-white hover:bg-white hover:text-black"
                   : "border-border bg-background text-foreground hover:bg-foreground hover:text-background hover:border-foreground"
               }`}
               aria-label="Attach image"
@@ -186,7 +186,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             <button
               onClick={onStop}
               className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 ${
-                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+                luxe ? "bg-white text-[#000]" : "bg-foreground text-background"
               }`}
               aria-label="Stop"
             >
@@ -197,7 +197,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
               onClick={submit}
               disabled={!text.trim() && images.length === 0}
               className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25 ${
-                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+                luxe ? "bg-white text-[#000]" : "bg-foreground text-background"
               }`}
               aria-label="Send"
             >
