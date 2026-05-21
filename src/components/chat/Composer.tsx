@@ -6,6 +6,7 @@ type Props = {
   onSend: (text: string, images: ChatImage[]) => void;
   loading: boolean;
   onStop?: () => void;
+  luxe?: boolean;
 };
 
 const MAX_IMAGES = 5;
@@ -34,7 +35,7 @@ async function fileToCompressedDataUrl(file: File, maxDim = 1280, quality = 0.82
   }
 }
 
-export function Composer({ onSend, loading, onStop }: Props) {
+export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -84,9 +85,11 @@ export function Composer({ onSend, loading, onStop }: Props) {
           setDragOver(false);
           handleFiles(e.dataTransfer.files);
         }}
-        className={`relative rounded-[28px] border bg-background shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] transition focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] ${
-          dragOver ? "border-foreground/60 ring-4 ring-foreground/5" : "border-border focus-within:border-foreground/30"
-        }`}
+        className={`relative rounded-[28px] border transition ${
+          luxe
+            ? "border-white/15 bg-white/[0.06] text-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)] backdrop-blur-2xl focus-within:border-white/30"
+            : "border-border bg-background text-foreground shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] focus-within:border-foreground/30"
+        } ${dragOver ? (luxe ? "ring-4 ring-white/15" : "border-foreground/60 ring-4 ring-foreground/5") : ""}`}
       >
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-[28px] bg-background/85 backdrop-blur-sm">
@@ -140,8 +143,10 @@ export function Composer({ onSend, loading, onStop }: Props) {
             }
           }}
           rows={1}
-          placeholder="Ask HALA GPT anything…"
-          className="block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+          placeholder={luxe ? "Whisper to HALA…" : "Ask HALA anything…"}
+          className={`block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none ${
+            luxe ? "placeholder:text-white/40" : "placeholder:text-muted-foreground"
+          }`}
         />
 
         <div className="flex items-center justify-between px-3 pb-3 pt-1">
@@ -150,14 +155,18 @@ export function Composer({ onSend, loading, onStop }: Props) {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={images.length >= MAX_IMAGES}
-              className="group grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-foreground transition hover:bg-foreground hover:text-background hover:border-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`group grid h-9 w-9 place-items-center rounded-full border transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                luxe
+                  ? "border-white/20 bg-white/10 text-white hover:bg-white hover:text-[oklch(0.15_0.02_270)]"
+                  : "border-border bg-background text-foreground hover:bg-foreground hover:text-background hover:border-foreground"
+              }`}
               aria-label="Attach image"
               title={`Attach image (${images.length}/${MAX_IMAGES})`}
             >
               <Plus size={17} strokeWidth={2.25} className="transition group-hover:rotate-90 duration-300" />
             </button>
             {images.length > 0 && (
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className={`text-[11px] font-medium ${luxe ? "text-white/60" : "text-muted-foreground"}`}>
                 {images.length}/{MAX_IMAGES}
               </span>
             )}
@@ -176,7 +185,9 @@ export function Composer({ onSend, loading, onStop }: Props) {
           {loading ? (
             <button
               onClick={onStop}
-              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background hover:opacity-90 transition"
+              className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 ${
+                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+              }`}
               aria-label="Stop"
             >
               <Square size={14} fill="currentColor" />
@@ -185,7 +196,9 @@ export function Composer({ onSend, loading, onStop }: Props) {
             <button
               onClick={submit}
               disabled={!text.trim() && images.length === 0}
-              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25"
+              className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25 ${
+                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+              }`}
               aria-label="Send"
             >
               <ArrowUp size={16} strokeWidth={2.5} />
@@ -193,8 +206,8 @@ export function Composer({ onSend, loading, onStop }: Props) {
           )}
         </div>
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        HALA GPT can make mistakes. Verify important information.
+      <p className={`mt-2 text-center text-[11px] ${luxe ? "text-white/45" : "text-muted-foreground"}`}>
+        HALA can make mistakes. Verify important information.
       </p>
     </div>
   );
