@@ -327,7 +327,7 @@ function HalaGPT() {
             }}
             className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
               temporary
-                ? "border-white/30 bg-white text-[oklch(0.15_0.02_270)]"
+                ? "border-white/30 bg-white text-[#000]"
                 : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
             }`}
             aria-label="Temporary chat"

@@ -186,7 +186,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             <button
               onClick={onStop}
               className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 ${
-                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+                luxe ? "bg-white text-[#000]" : "bg-foreground text-background"
               }`}
               aria-label="Stop"
             >
@@ -197,7 +197,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
               onClick={submit}
               disabled={!text.trim() && images.length === 0}
               className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25 ${
-                luxe ? "bg-white text-[oklch(0.15_0.02_270)]" : "bg-foreground text-background"
+                luxe ? "bg-white text-[#000]" : "bg-foreground text-background"
               }`}
               aria-label="Send"
             >
