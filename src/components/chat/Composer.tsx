@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Paperclip, Square, X, ImageIcon } from "lucide-react";
+import { ArrowUp, Plus, Square, X, FileImage } from "lucide-react";
 import type { ChatImage } from "./types";
 
 type Props = {
@@ -7,6 +7,8 @@ type Props = {
   loading: boolean;
   onStop?: () => void;
 };
+
+const MAX_IMAGES = 5;
 
 async function fileToDataUrl(file: File): Promise<string> {
   return await new Promise((resolve, reject) => {
@@ -20,6 +22,7 @@ async function fileToDataUrl(file: File): Promise<string> {
 export function Composer({ onSend, loading, onStop }: Props) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,7 +40,7 @@ export function Composer({ onSend, loading, onStop }: Props) {
       if (!f.type.startsWith("image/")) continue;
       next.push({ dataUrl: await fileToDataUrl(f), name: f.name });
     }
-    setImages((prev) => [...prev, ...next].slice(0, 4));
+    setImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES));
   };
 
   const submit = () => {
@@ -51,23 +54,62 @@ export function Composer({ onSend, loading, onStop }: Props) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-4 pt-2">
-      <div className="rounded-3xl border border-border bg-background shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] transition focus-within:border-foreground/30 focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.18)]">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          handleFiles(e.dataTransfer.files);
+        }}
+        className={`relative rounded-[28px] border bg-background shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] transition focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] ${
+          dragOver ? "border-foreground/60 ring-4 ring-foreground/5" : "border-border focus-within:border-foreground/30"
+        }`}
+      >
+        {dragOver && (
+          <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-[28px] bg-background/85 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background">
+              <FileImage size={15} /> Drop images to attach
+            </div>
+          </div>
+        )}
+
         {images.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-b border-border p-3">
+          <div className="flex flex-wrap gap-2.5 p-3 pb-1">
             {images.map((img, i) => (
-              <div key={i} className="group relative h-16 w-16 overflow-hidden rounded-xl border border-border">
-                <img src={img.dataUrl} alt={img.name} className="h-full w-full object-cover" />
+              <div
+                key={i}
+                className="group relative h-20 w-20 overflow-hidden rounded-2xl border border-border bg-[oklch(0.97_0_0)] shadow-sm transition hover:shadow-md"
+              >
+                <img src={img.dataUrl} alt={img.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/55 to-transparent" />
+                <span className="pointer-events-none absolute bottom-1 left-1.5 right-7 truncate text-[10px] font-medium text-white">
+                  {img.name}
+                </span>
                 <button
                   onClick={() => setImages((p) => p.filter((_, j) => j !== i))}
-                  className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-foreground/90 text-background opacity-0 transition group-hover:opacity-100"
+                  className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition hover:bg-foreground hover:text-background"
                   aria-label="Remove image"
                 >
-                  <X size={11} />
+                  <X size={12} strokeWidth={2.5} />
                 </button>
               </div>
             ))}
+            {images.length < MAX_IMAGES && (
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="grid h-20 w-20 place-items-center rounded-2xl border border-dashed border-border bg-[oklch(0.98_0_0)] text-muted-foreground transition hover:border-foreground/40 hover:bg-[oklch(0.96_0_0)] hover:text-foreground"
+                aria-label="Add image"
+              >
+                <Plus size={20} />
+              </button>
+            )}
           </div>
         )}
+
         <textarea
           ref={taRef}
           value={text}
@@ -82,17 +124,24 @@ export function Composer({ onSend, loading, onStop }: Props) {
           placeholder="Ask HALA GPT anything…"
           className="block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
         />
+
         <div className="flex items-center justify-between px-3 pb-3 pt-1">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm text-foreground hover:bg-accent transition"
+              disabled={images.length >= MAX_IMAGES}
+              className="group grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-foreground transition hover:bg-foreground hover:text-background hover:border-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Attach image"
+              title={`Attach image (${images.length}/${MAX_IMAGES})`}
             >
-              <Paperclip size={15} />
-              <span className="hidden sm:inline">Attach</span>
+              <Plus size={17} strokeWidth={2.25} className="transition group-hover:rotate-90 duration-300" />
             </button>
+            {images.length > 0 && (
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {images.length}/{MAX_IMAGES}
+              </span>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -104,9 +153,6 @@ export function Composer({ onSend, loading, onStop }: Props) {
                 e.target.value = "";
               }}
             />
-            <span className="hidden items-center gap-1 px-2 text-xs text-muted-foreground sm:inline-flex">
-              <ImageIcon size={12} /> Image OCR & vision supported
-            </span>
           </div>
           {loading ? (
             <button
@@ -120,7 +166,7 @@ export function Composer({ onSend, loading, onStop }: Props) {
             <button
               onClick={submit}
               disabled={!text.trim() && images.length === 0}
-              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25"
               aria-label="Send"
             >
               <ArrowUp size={16} strokeWidth={2.5} />
