@@ -98,7 +98,10 @@ export function AssistantMessage({
     anchorRef.current?.scrollIntoView({ block: "end" });
   };
 
-  const { shown, isTyping } = useTypewriter(m.content, true, scrollToEnd);
+  // Only typewrite when the message was empty at mount (i.e. a fresh
+  // streaming reply being filled in). Loading an existing chat shows instantly.
+  const initialEmptyRef = useRef(m.content === "");
+  const { shown, isTyping } = useTypewriter(m.content, initialEmptyRef.current, scrollToEnd);
 
   const copy = async () => {
     await navigator.clipboard.writeText(m.content);

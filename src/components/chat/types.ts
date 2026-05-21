@@ -14,4 +14,15 @@ export type Conversation = {
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  pinned?: boolean;
+  archived?: boolean;
+  projectId?: string | null;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  createdAt: number;
 };

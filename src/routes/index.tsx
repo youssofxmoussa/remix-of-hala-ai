@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, MessageSquareDashed } from "lucide-react";
-import logoUrl from "@/assets/halagpt-logo.png";
+import { PanelLeft, MessageSquareDashed, Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
-import type { ChatImage, ChatMessage, Conversation } from "@/components/chat/types";
+import type { ChatImage, ChatMessage, Conversation, Project } from "@/components/chat/types";
 
 export const Route = createFileRoute("/")({
   component: HalaGPT,
@@ -30,32 +29,35 @@ export const Route = createFileRoute("/")({
 });
 
 const STORAGE_KEY = "halagpt:conversations:v1";
+const PROJECTS_KEY = "halagpt:projects:v1";
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-function loadConversations(): Conversation[] {
-  if (typeof window === "undefined") return [];
+function loadJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as Conversation[];
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
   } catch {
-    return [];
+    return fallback;
   }
 }
 
 function HalaGPT() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [temporary, setTemporary] = useState(false);
 
   useEffect(() => {
-    const c = loadConversations();
+    const c = loadJson<Conversation[]>(STORAGE_KEY, []);
     setConversations(c);
+    setProjects(loadJson<Project[]>(PROJECTS_KEY, []));
     if (c.length > 0) setActiveId(c[0].id);
   }, []);
 
@@ -63,6 +65,11 @@ function HalaGPT() {
     if (typeof window === "undefined") return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
   }, [conversations]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  }, [projects]);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
@@ -80,6 +87,17 @@ function HalaGPT() {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
   };
+
+  const renameChat = (id: string, title: string) =>
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
+  const togglePin = (id: string) =>
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)));
+  const toggleArchive = (id: string) => {
+    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c)));
+    if (activeId === id) setActiveId(null);
+  };
+  const createProject = (p: Omit<Project, "id" | "createdAt">) =>
+    setProjects((prev) => [{ id: uid(), createdAt: Date.now(), ...p }, ...prev]);
 
   const callApi = async (msgs: ChatMessage[]): Promise<string> => {
     const payload = {
@@ -260,9 +278,23 @@ function HalaGPT() {
   };
 
   return (
-    <div className="relative flex h-dvh w-full overflow-hidden bg-background text-foreground">
+    <div
+      className={`relative flex h-dvh w-full overflow-hidden text-foreground transition-colors duration-500 ${
+        temporary ? "hala-temp" : "bg-background"
+      }`}
+    >
+      {/* Luxe temporary-chat ambient layer */}
+      {temporary && (
+        <>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,oklch(0.22_0.04_280)_0%,oklch(0.12_0.02_270)_45%,oklch(0.06_0.01_260)_100%)]" />
+          <div className="pointer-events-none absolute -top-32 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[oklch(0.55_0.18_300/0.25)] blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-[360px] w-[360px] rounded-full bg-[oklch(0.55_0.16_220/0.18)] blur-3xl" />
+        </>
+      )}
+
       <Sidebar
         conversations={conversations}
+        projects={projects}
         activeId={activeId}
         onSelect={(id) => {
           setActiveId(id);
@@ -270,16 +302,24 @@ function HalaGPT() {
         }}
         onNew={newChat}
         onDelete={deleteChat}
+        onRename={renameChat}
+        onTogglePin={togglePin}
+        onToggleArchive={toggleArchive}
+        onCreateProject={createProject}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((o) => !o)}
       />
 
-      <main className="relative flex min-w-0 flex-1 flex-col">
+      <main className={`relative z-[1] flex min-w-0 flex-1 flex-col ${temporary ? "text-[oklch(0.98_0_0)]" : ""}`}>
         {/* Floating controls */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-4">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-border bg-background/85 text-foreground shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition hover:bg-[oklch(0.97_0_0)] active:scale-95"
+            className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
+              temporary
+                ? "border-white/15 bg-white/10 text-white hover:bg-white/15"
+                : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
+            }`}
             aria-label="Open sidebar"
           >
             <PanelLeft size={18} />
@@ -291,7 +331,7 @@ function HalaGPT() {
             }}
             className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
               temporary
-                ? "border-foreground bg-foreground text-background"
+                ? "border-white/30 bg-white text-[oklch(0.15_0.02_270)]"
                 : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
             }`}
             aria-label="Temporary chat"
@@ -302,19 +342,18 @@ function HalaGPT() {
           </button>
         </div>
 
-        {/* Empty-state hero (logo only) */}
-        <div
-          className={`pointer-events-none absolute inset-x-0 z-0 flex flex-col items-center transition-all duration-500 ease-out ${
-            isEmpty ? "top-[28vh] opacity-100" : "top-[12vh] opacity-0"
-          }`}
-        >
-          <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border bg-background shadow-sm">
-            <img src={logoUrl} alt="HALA GPT" className="h-10 w-10" />
+        {/* Luxe whisper for temporary mode (no logo/text in normal mode) */}
+        {isEmpty && temporary && (
+          <div className="pointer-events-none absolute inset-x-0 top-[22vh] z-0 flex flex-col items-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-[12px] font-medium tracking-[0.18em] uppercase text-white/80 backdrop-blur-xl">
+              <Sparkles size={13} /> Temporary
+            </div>
+            <h2 className="mt-4 bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-[28px] font-semibold tracking-tight text-transparent">
+              A private moment with HALA
+            </h2>
+            <p className="mt-2 text-[13px] text-white/55">Nothing here is saved. Speak freely.</p>
           </div>
-          <div className="mt-3 text-[22px] font-semibold tracking-tight">
-            {temporary ? "Temporary chat" : "HALA GPT"}
-          </div>
-        </div>
+        )}
 
         {/* Chat scroll area */}
         <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${isEmpty ? "opacity-0" : "opacity-100"}`}>
@@ -328,10 +367,10 @@ function HalaGPT() {
         {/* Composer — centered when empty, slides to bottom when chat starts */}
         <div
           className={`relative z-10 transition-all duration-500 ease-out ${
-            isEmpty ? "-translate-y-[28vh]" : "translate-y-0"
+            isEmpty ? "-translate-y-[20vh]" : "translate-y-0"
           }`}
         >
-          <Composer onSend={send} loading={loading} />
+          <Composer onSend={send} loading={loading} luxe={temporary} />
         </div>
       </main>
     </div>
