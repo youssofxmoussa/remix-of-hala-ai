@@ -22,7 +22,8 @@ export type Conversation = {
 export type Project = {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;
+  icon?: string;
   color: string;
   createdAt: number;
 };
