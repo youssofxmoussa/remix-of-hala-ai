@@ -12,6 +12,18 @@ import {
   ArrowLeft,
   Plus,
   ChevronRight,
+  BookOpen,
+  TrendingUp,
+  Feather,
+  Plane,
+  Dumbbell,
+  Briefcase,
+  Heart,
+  Code2,
+  Palette,
+  GraduationCap,
+  Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import type { Conversation, Project } from "./types";
 import { useEffect, useRef, useState } from "react";
