@@ -1,5 +1,5 @@
 // Server-only Groq client. The API key stays on the server.
-const GROQ_API_KEY = "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";
+const GROQ_API_KEY = "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";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export type GroqContentPart =
