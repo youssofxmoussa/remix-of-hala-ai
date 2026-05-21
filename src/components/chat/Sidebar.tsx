@@ -428,25 +428,29 @@ function ProjectsPanel({ projects, onNewProject }: { projects: Project[]; onNewP
   return (
     <div className="flex-1 overflow-y-auto px-4 pt-2 pb-24">
       <ul className="space-y-2">
-        {projects.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center gap-3 rounded-2xl border border-border bg-background px-3 py-3"
-          >
-            <span
-              className="grid h-11 w-11 place-items-center rounded-2xl text-xl"
-              style={{ background: p.color }}
+        {projects.map((p) => {
+          const Icon = resolveProjectIcon(p.icon);
+          return (
+            <li
+              key={p.id}
+              className="flex items-center gap-3 rounded-2xl border border-border bg-background px-3 py-3 transition hover:bg-[oklch(0.98_0_0)]"
             >
-              {p.emoji}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[15px] font-medium">{p.name}</div>
-              <div className="text-[12px] text-muted-foreground">
-                {new Date(p.createdAt).toLocaleDateString()}
+              <span
+                className="grid h-11 w-11 place-items-center rounded-2xl text-foreground"
+                style={{ background: p.color }}
+              >
+                <Icon size={20} strokeWidth={1.9} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-medium">{p.name}</div>
+                <div className="text-[12px] text-muted-foreground">
+                  {new Date(p.createdAt).toLocaleDateString()}
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+              <ChevronRight size={18} className="text-muted-foreground" />
+            </li>
+          );
+        })}
       </ul>
       <button
         onClick={onNewProject}
