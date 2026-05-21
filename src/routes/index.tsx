@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, MessageSquareDashed, Sparkles } from "lucide-react";
+import { PanelLeft, MessageSquareDashed } from "lucide-react";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
