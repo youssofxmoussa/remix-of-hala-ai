@@ -81,11 +81,10 @@
   }
 }
 
-/* Custom scrollbar — luxe minimal */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: oklch(0.88 0 0); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: oklch(0.78 0 0); }
+/* Hide scrollbars everywhere — keep scroll behavior */
+::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
 
 /* Markdown prose */
 .prose-chat {

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, Share } from "lucide-react";
+import { PanelLeft, SquarePen, ChevronDown, Share } from "lucide-react";
+import logoUrl from "@/assets/halagpt-logo.png";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
@@ -225,31 +226,47 @@ function HalaGPT() {
         onToggle={() => setSidebarOpen((o) => !o)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border px-3 py-2.5">
-          <div className="flex items-center gap-2">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-3 py-2.5 backdrop-blur-xl">
+          <div className="flex items-center gap-1">
             {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="rounded-lg p-2 hover:bg-accent transition"
-                aria-label="Open sidebar"
-              >
-                <PanelLeft size={18} />
-              </button>
+              <>
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                  aria-label="Open sidebar"
+                >
+                  <PanelLeft size={18} />
+                </button>
+                <button
+                  onClick={newChat}
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+                  aria-label="New chat"
+                >
+                  <SquarePen size={18} />
+                </button>
+              </>
             )}
-            <div className="flex items-center gap-2">
-              <div className="grid h-7 w-7 place-items-center rounded-lg bg-foreground text-background text-xs font-bold">
-                H
-              </div>
-              <span className="text-base font-semibold tracking-tight">HALA GPT</span>
+            <button
+              className="group ml-1 inline-flex items-center gap-1.5 rounded-2xl px-3 py-1.5 text-[15px] font-semibold tracking-tight hover:bg-accent transition"
+              aria-label="Model selector"
+            >
+              <img src={logoUrl} alt="HALA GPT" className="h-5 w-5" />
+              <span>HALA GPT</span>
+              <ChevronDown size={15} className="mt-0.5 text-muted-foreground transition group-hover:text-foreground" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3.5 py-1.5 text-sm font-medium text-foreground hover:bg-accent transition shadow-sm"
+              aria-label="Share"
+            >
+              <Share size={14} strokeWidth={2.25} />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+            <div className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-foreground text-background text-xs font-semibold">
+              H
             </div>
           </div>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-sm hover:bg-accent transition"
-            aria-label="Share"
-          >
-            <Share size={14} />
-            <span className="hidden sm:inline">Share</span>
-          </button>
         </header>
 
         <div className="flex-1 overflow-y-auto">

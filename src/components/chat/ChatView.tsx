@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AssistantMessage, UserMessage } from "./Message";
 import type { ChatMessage } from "./types";
+import logoUrl from "@/assets/halagpt-logo.png";
 
 type Props = {
   messages: ChatMessage[];
@@ -25,8 +26,8 @@ export function ChatView({ messages, loading, onRegenerate }: Props) {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <div className="mb-6 flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-foreground text-background text-lg font-bold tracking-tight">
-            H
+          <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border bg-background shadow-sm">
+            <img src={logoUrl} alt="HALA GPT logo" className="h-10 w-10" />
           </div>
           <div className="text-left">
             <div className="text-2xl font-semibold tracking-tight">HALA GPT</div>
