@@ -280,7 +280,7 @@ function HalaGPT() {
   return (
     <div
       className={`relative flex h-dvh w-full overflow-hidden text-foreground transition-colors duration-500 ${
-        temporary ? "hala-temp" : "bg-background"
+        temporary ? "bg-black" : "bg-background"
       }`}
     >
       {/* Pure incognito ambient layer */}
