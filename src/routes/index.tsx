@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, SquarePen, ChevronDown, Share2 } from "lucide-react";
+import { PanelLeft, SquarePen } from "lucide-react";
 import logoUrl from "@/assets/halagpt-logo.png";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
