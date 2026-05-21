@@ -87,7 +87,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
         }}
         className={`relative rounded-[28px] border transition ${
           luxe
-            ? "border-white/15 bg-white/[0.06] text-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.55)] backdrop-blur-2xl focus-within:border-white/30"
+            ? "border-white/20 bg-white/[0.04] text-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl focus-within:border-white/40"
             : "border-border bg-background text-foreground shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-within:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.2)] focus-within:border-foreground/30"
         } ${dragOver ? (luxe ? "ring-4 ring-white/15" : "border-foreground/60 ring-4 ring-foreground/5") : ""}`}
       >
