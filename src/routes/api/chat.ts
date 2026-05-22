@@ -1,22 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@tanstack/react-start";
-import { groqChat, type GroqMessage } from "@/lib/groq.server";
+import { halaChat, type HalaMsg } from "@/lib/halagpt.server";
 
-type ChatBody = { messages: GroqMessage[] };
+type IncomingMsg = {
+  role: "user" | "assistant" | "system";
+  content: string;
+  links?: string[];
+};
+type ChatBody = { messages: IncomingMsg[]; deepThink?: boolean };
 
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
-          const { messages } = (await request.json()) as ChatBody;
-          if (!Array.isArray(messages) || messages.length === 0) {
+          const body = (await request.json()) as ChatBody;
+          if (!Array.isArray(body.messages) || body.messages.length === 0) {
             return new Response(JSON.stringify({ error: "messages required" }), {
               status: 400,
               headers: { "Content-Type": "application/json" },
             });
           }
-          const content = await groqChat(messages);
+          const msgs: HalaMsg[] = body.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            links: m.links,
+          }));
+          const content = await halaChat(msgs, { deepThink: !!body.deepThink });
           return new Response(JSON.stringify({ content }), {
             headers: { "Content-Type": "application/json" },
           });
