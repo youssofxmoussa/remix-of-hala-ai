@@ -39,7 +39,14 @@ export async function groqChat(messages: GroqMessage[]): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Groq error ${res.status}: ${text}`);
+    let detail = text;
+    try {
+      const j = JSON.parse(text) as { error?: { message?: string } };
+      if (j.error?.message) detail = j.error.message;
+    } catch {
+      /* keep raw text */
+    }
+    throw new Error(`Groq ${res.status}: ${detail.slice(0, 300)}`);
   }
   const data = (await res.json()) as {
     choices: { message: { content: string } }[];

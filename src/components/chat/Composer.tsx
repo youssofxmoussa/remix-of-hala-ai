@@ -143,7 +143,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             }
           }}
           rows={1}
-          placeholder={luxe ? "Temporary HALA" : "Ask HALA anything…"}
+          placeholder={luxe ? "Temporary HalaGPT" : "Ask HalaGPT anything…"}
           className={`block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none ${
             luxe ? "placeholder:text-white/40" : "placeholder:text-muted-foreground"
           }`}
@@ -207,7 +207,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
         </div>
       </div>
       <p className={`mt-2 text-center text-[11px] ${luxe ? "text-white/45" : "text-muted-foreground"}`}>
-        HALA can make mistakes. Verify important information.
+        HalaGPT can make mistakes. Verify important information.
       </p>
     </div>
   );
