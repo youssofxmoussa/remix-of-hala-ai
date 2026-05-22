@@ -1,46 +1,49 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, MessageSquareDashed, SquarePen } from "lucide-react";
+import { PanelLeft, MessageSquareDashed, SquarePen, LogOut } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
-import type { ChatImage, ChatMessage, Conversation, Project } from "@/components/chat/types";
+import { uploadChatAttachment } from "@/lib/uploads.functions";
+import { supabase } from "@/integrations/supabase/client";
+import type { ChatAttachment, ChatMessage, Conversation, Project } from "@/components/chat/types";
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/_authenticated/chat")({
   component: HalaGPTChat,
   head: () => ({
     meta: [
       { title: "HalaGPT — Chat" },
-      {
-        name: "description",
-        content:
-          "Chat with HalaGPT — a Palestinian AI assistant with vision, OCR, code, math and rich markdown.",
-      },
-      { property: "og:title", content: "HalaGPT — Chat" },
-      { property: "og:description", content: "Chat with HalaGPT — Palestinian AI." },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "/chat" },
+      { name: "description", content: "Chat with HalaGPT — a Palestinian AI assistant." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
     links: [{ rel: "canonical", href: "/chat" }],
   }),
 });
 
-const STORAGE_KEY = "halagpt:conversations:v1";
+const STORAGE_KEY = "halagpt:conversations:v2";
 const PROJECTS_KEY = "halagpt:projects:v1";
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-
 function loadJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 }
 
 function HalaGPTChat() {
@@ -50,6 +53,7 @@ function HalaGPTChat() {
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [temporary, setTemporary] = useState(false);
+  const uploadFn = useServerFn(uploadChatAttachment);
 
   useEffect(() => {
     const c = loadJson<Conversation[]>(STORAGE_KEY, []);
@@ -57,62 +61,45 @@ function HalaGPTChat() {
     setProjects(loadJson<Project[]>(PROJECTS_KEY, []));
     if (c.length > 0) setActiveId(c[0].id);
   }, []);
-
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
   }, [conversations]);
-
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    if (typeof window !== "undefined") localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
   }, [projects]);
 
-  const active = useMemo(
-    () => conversations.find((c) => c.id === activeId) ?? null,
-    [conversations, activeId],
-  );
-
+  const active = useMemo(() => conversations.find((c) => c.id === activeId) ?? null, [conversations, activeId]);
   const isEmpty = !active || active.messages.length === 0;
-
-  const newChat = () => {
-    setActiveId(null);
-    setTemporary(false);
-  };
 
   const deleteChat = (id: string) => {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) setActiveId(null);
   };
-
   const renameChat = (id: string, title: string) =>
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
+    setConversations((p) => p.map((c) => (c.id === id ? { ...c, title } : c)));
   const togglePin = (id: string) =>
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)));
+    setConversations((p) => p.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)));
   const toggleArchive = (id: string) => {
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c)));
+    setConversations((p) => p.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c)));
     if (activeId === id) setActiveId(null);
   };
   const createProject = (p: Omit<Project, "id" | "createdAt">) =>
     setProjects((prev) => [{ id: uid(), createdAt: Date.now(), ...p }, ...prev]);
 
-  const callApi = async (msgs: ChatMessage[]): Promise<string> => {
+  const handleUpload = async (file: File): Promise<ChatAttachment> => {
+    const dataUrl = await fileToDataUrl(file);
+    const { url, mime } = await uploadFn({ data: { dataUrl, filename: file.name } });
+    return { url, mime, name: file.name, previewUrl: mime.startsWith("image/") ? dataUrl : undefined };
+  };
+
+  const callApi = async (msgs: ChatMessage[], deepThink: boolean): Promise<string> => {
     const payload = {
-      messages: msgs.map((m) => {
-        if (m.role === "user" && m.images && m.images.length > 0) {
-          return {
-            role: "user" as const,
-            content: [
-              ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
-              ...m.images.map((img) => ({
-                type: "image_url" as const,
-                image_url: { url: img.dataUrl },
-              })),
-            ],
-          };
-        }
-        return { role: m.role, content: m.content };
-      }),
+      deepThink,
+      messages: msgs.map((m) => ({
+        role: m.role,
+        content: m.content,
+        links: m.attachments?.map((a) => a.url),
+      })),
     };
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -129,75 +116,54 @@ function HalaGPTChat() {
     return data.content ?? "";
   };
 
-  const send = async (text: string, images: ChatImage[]) => {
+  const send = async (
+    text: string,
+    attachments: ChatAttachment[],
+    opts: { deepThink: boolean; search: boolean },
+  ) => {
     let convo = active;
     if (!convo) {
-      convo = {
-        id: uid(),
-        title: text.slice(0, 40) || "New chat",
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
+      convo = { id: uid(), title: text.slice(0, 40) || "New chat", messages: [], createdAt: Date.now(), updatedAt: Date.now() };
       if (!temporary) setConversations((prev) => [convo!, ...prev]);
       setActiveId(convo.id);
     }
-
+    let userText = text;
+    if (opts.search && text.trim()) {
+      userText = `[Web search requested] ${text}`;
+    }
     const userMsg: ChatMessage = {
       id: uid(),
       role: "user",
-      content: text,
-      images: images.length > 0 ? images : undefined,
+      content: userText,
+      attachments: attachments.length > 0 ? attachments : undefined,
       createdAt: Date.now(),
     };
-    const placeholder: ChatMessage = {
-      id: uid(),
-      role: "assistant",
-      content: "",
-      createdAt: Date.now(),
-    };
-
+    const placeholder: ChatMessage = { id: uid(), role: "assistant", content: "", createdAt: Date.now() };
     const baseMessages = [...convo.messages, userMsg];
     const isFirst = convo.messages.length === 0;
     const targetId = convo.id;
 
-    if (temporary) {
-      setConversations((prev) => {
-        const exists = prev.some((c) => c.id === targetId);
-        const next: Conversation = {
-          ...convo!,
-          messages: [...baseMessages, placeholder],
-          title: isFirst ? text.slice(0, 40) || "Temporary" : convo!.title,
-          updatedAt: Date.now(),
-        };
-        return exists ? prev.map((c) => (c.id === targetId ? next : c)) : [next, ...prev];
-      });
-    } else {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: [...baseMessages, placeholder],
-                title: isFirst ? text.slice(0, 40) || "New chat" : c.title,
-                updatedAt: Date.now(),
-              }
-            : c,
-        ),
-      );
-    }
+    setConversations((prev) => {
+      const exists = prev.some((c) => c.id === targetId);
+      const next: Conversation = {
+        ...convo!,
+        messages: [...baseMessages, placeholder],
+        title: isFirst ? text.slice(0, 40) || (temporary ? "Temporary" : "New chat") : convo!.title,
+        updatedAt: Date.now(),
+      };
+      if (temporary && !exists) return [next, ...prev];
+      return exists ? prev.map((c) => (c.id === targetId ? next : c)) : [next, ...prev];
+    });
 
     setLoading(true);
     try {
-      const reply = await callApi(baseMessages);
+      const reply = await callApi(baseMessages, opts.deepThink);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === targetId
             ? {
                 ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: reply } : m,
-                ),
+                messages: c.messages.map((m) => (m.id === placeholder.id ? { ...m, content: reply } : m)),
                 updatedAt: Date.now(),
               }
             : c,
@@ -210,9 +176,7 @@ function HalaGPTChat() {
           c.id === targetId
             ? {
                 ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m,
-                ),
+                messages: c.messages.map((m) => (m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m)),
               }
             : c,
         ),
@@ -228,34 +192,17 @@ function HalaGPTChat() {
     const msgs = [...active.messages];
     while (msgs.length && msgs[msgs.length - 1].role === "assistant") msgs.pop();
     if (msgs.length === 0 || msgs[msgs.length - 1].role !== "user") return;
-
-    const placeholder: ChatMessage = {
-      id: uid(),
-      role: "assistant",
-      content: "",
-      createdAt: Date.now(),
-    };
+    const placeholder: ChatMessage = { id: uid(), role: "assistant", content: "", createdAt: Date.now() };
     setConversations((prev) =>
-      prev.map((c) =>
-        c.id === targetId
-          ? { ...c, messages: [...msgs, placeholder], updatedAt: Date.now() }
-          : c,
-      ),
+      prev.map((c) => (c.id === targetId ? { ...c, messages: [...msgs, placeholder], updatedAt: Date.now() } : c)),
     );
-
     setLoading(true);
     try {
-      const reply = await callApi(msgs);
+      const reply = await callApi(msgs, false);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: reply } : m,
-                ),
-                updatedAt: Date.now(),
-              }
+            ? { ...c, messages: c.messages.map((m) => (m.id === placeholder.id ? { ...m, content: reply } : m)) }
             : c,
         ),
       );
@@ -264,18 +211,18 @@ function HalaGPTChat() {
       setConversations((prev) =>
         prev.map((c) =>
           c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m,
-                ),
-              }
+            ? { ...c, messages: c.messages.map((m) => (m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m)) }
             : c,
         ),
       );
     } finally {
       setLoading(false);
     }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    if (typeof window !== "undefined") window.location.href = "/";
   };
 
   return (
@@ -294,7 +241,10 @@ function HalaGPTChat() {
           setActiveId(id);
           setTemporary(false);
         }}
-        onNew={newChat}
+        onNew={() => {
+          setActiveId(null);
+          setTemporary(false);
+        }}
         onDelete={deleteChat}
         onRename={renameChat}
         onTogglePin={togglePin}
@@ -304,19 +254,12 @@ function HalaGPTChat() {
         onToggle={() => setSidebarOpen((o) => !o)}
       />
 
-      <main
-        className={`relative z-[1] flex min-w-0 flex-1 flex-col ${
-          temporary ? "text-[oklch(0.98_0_0)]" : ""
-        }`}
-      >
-        {/* Floating controls */}
+      <main className={`relative z-[1] flex min-w-0 flex-1 flex-col ${temporary ? "text-[oklch(0.98_0_0)]" : ""}`}>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-4">
           <button
             onClick={() => setSidebarOpen(true)}
             className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
-              temporary
-                ? "border-white/15 bg-white/10 text-white hover:bg-white/15"
-                : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
+              temporary ? "border-white/15 bg-white/10 text-white hover:bg-white/15" : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
             }`}
             aria-label="Open sidebar"
           >
@@ -324,33 +267,26 @@ function HalaGPTChat() {
           </button>
 
           <div className="pointer-events-auto flex items-center gap-2">
-            {/* NEW CHAT (separate from temporary — no dark toggle) */}
             <button
               onClick={() => {
                 setTemporary(false);
                 setActiveId(null);
               }}
               className={`grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
-                temporary
-                  ? "border-white/15 bg-white/10 text-white hover:bg-white/15"
-                  : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
+                temporary ? "border-white/15 bg-white/10 text-white hover:bg-white/15" : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
               }`}
               aria-label="New chat"
               title="New chat"
             >
               <SquarePen size={18} />
             </button>
-
-            {/* TEMPORARY toggle */}
             <button
               onClick={() => {
                 setTemporary((t) => !t);
                 setActiveId(null);
               }}
               className={`grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
-                temporary
-                  ? "border-white/30 bg-white text-[#000]"
-                  : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
+                temporary ? "border-white/30 bg-white text-[#000]" : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
               }`}
               aria-label="Temporary chat"
               aria-pressed={temporary}
@@ -358,35 +294,37 @@ function HalaGPTChat() {
             >
               <MessageSquareDashed size={18} />
             </button>
+            <button
+              onClick={signOut}
+              className={`grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
+                temporary ? "border-white/15 bg-white/10 text-white hover:bg-white/15" : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
+              }`}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
 
         {isEmpty && temporary && (
           <div className="pointer-events-none absolute inset-x-0 top-[24vh] z-0 flex justify-center">
-            <h2 className="text-[24px] font-medium tracking-tight text-white/90">
-              Temporary HalaGPT
-            </h2>
+            <h2 className="text-[24px] font-medium tracking-tight text-white/90">Temporary</h2>
           </div>
         )}
 
-        <div
-          className={`flex-1 overflow-y-auto transition-opacity duration-300 ${
-            isEmpty ? "opacity-0" : "opacity-100"
-          }`}
-        >
-          <ChatView
-            messages={active?.messages ?? []}
-            loading={loading}
-            onRegenerate={regenerate}
-          />
+        <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${isEmpty ? "opacity-0" : "opacity-100"}`}>
+          <ChatView messages={active?.messages ?? []} loading={loading} onRegenerate={regenerate} />
         </div>
 
-        <div
-          className={`relative z-10 transition-all duration-500 ease-out ${
-            isEmpty ? "-translate-y-[20vh]" : "translate-y-0"
-          }`}
-        >
-          <Composer onSend={send} loading={loading} luxe={temporary} />
+        <div className={`relative z-10 transition-all duration-500 ease-out ${isEmpty ? "-translate-y-[20vh]" : "translate-y-0"}`}>
+          <Composer
+            onSend={send}
+            loading={loading}
+            luxe={temporary}
+            onUpload={handleUpload}
+            onImageRequest={() => alert("Image studio is in beta — coming soon.")}
+          />
         </div>
       </main>
     </div>

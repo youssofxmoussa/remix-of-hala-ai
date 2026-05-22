@@ -1,46 +1,42 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Plus, Square, X, FileImage } from "lucide-react";
-import type { ChatImage } from "./types";
+import {
+  ArrowUp,
+  Plus,
+  Square,
+  X,
+  FileImage,
+  Brain,
+  Globe,
+  Image as ImageIcon,
+  Paperclip,
+  FileText,
+  Check,
+} from "lucide-react";
+import type { ChatAttachment } from "./types";
 
 type Props = {
-  onSend: (text: string, images: ChatImage[]) => void;
+  onSend: (text: string, attachments: ChatAttachment[], opts: { deepThink: boolean; search: boolean }) => void;
   loading: boolean;
   onStop?: () => void;
   luxe?: boolean;
+  onUpload: (file: File) => Promise<ChatAttachment>; // upload to server, return public URL
+  onImageRequest?: () => void; // hook for "Create image" action
 };
 
-const MAX_IMAGES = 5;
+const MAX_ATTACHMENTS = 5;
+const ACCEPT = "image/*,application/pdf";
 
-async function fileToCompressedDataUrl(file: File, maxDim = 1280, quality = 0.82): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = url;
-    });
-    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const w = Math.max(1, Math.round(img.width * scale));
-    const h = Math.max(1, Math.round(img.height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas unsupported");
-    ctx.drawImage(img, 0, 0, w, h);
-    return canvas.toDataURL("image/jpeg", quality);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
+export function Composer({ onSend, loading, onStop, luxe = false, onUpload, onImageRequest }: Props) {
   const [text, setText] = useState("");
-  const [images, setImages] = useState<ChatImage[]>([]);
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deepThink, setDeepThink] = useState(false);
+  const [search, setSearch] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = taRef.current;
@@ -49,27 +45,53 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
     el.style.height = Math.min(el.scrollHeight, 240) + "px";
   }, [text]);
 
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    if (menuOpen) document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
+
+  // Auto-RTL the textarea based on first strong character.
+  const dir: "ltr" | "rtl" = (() => {
+    const stripped = text.replace(/```[\s\S]*?```/g, "");
+    const m = stripped.match(/[A-Za-z\u0590-\u08FF\uFB1D-\uFEFC]/);
+    if (!m) return "ltr";
+    return /[\u0590-\u08FF\uFB1D-\uFEFC]/.test(m[0]) ? "rtl" : "ltr";
+  })();
+
   const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
-    const next: ChatImage[] = [];
-    for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) continue;
-      try {
-        next.push({ dataUrl: await fileToCompressedDataUrl(f), name: f.name });
-      } catch {
-        // skip unreadable image
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const slots = MAX_ATTACHMENTS - attachments.length;
+      const list = Array.from(files).slice(0, slots);
+      const uploaded: ChatAttachment[] = [];
+      for (const f of list) {
+        if (!f.type.startsWith("image/") && f.type !== "application/pdf") continue;
+        try {
+          const a = await onUpload(f);
+          uploaded.push(a);
+        } catch (e) {
+          console.error("upload failed", e);
+        }
       }
+      setAttachments((prev) => [...prev, ...uploaded].slice(0, MAX_ATTACHMENTS));
+    } finally {
+      setUploading(false);
     }
-    setImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES));
   };
 
   const submit = () => {
     const t = text.trim();
-    if (!t && images.length === 0) return;
-    if (loading) return;
-    onSend(t, images);
+    if (!t && attachments.length === 0) return;
+    if (loading || uploading) return;
+    onSend(t, attachments, { deepThink, search });
     setText("");
-    setImages([]);
+    setAttachments([]);
+    setSearch(false);
+    // keep deepThink sticky — feels like ChatGPT's toggle
   };
 
   return (
@@ -94,47 +116,42 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
         {dragOver && (
           <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center rounded-[28px] bg-background/85 backdrop-blur-sm">
             <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background">
-              <FileImage size={15} /> Drop images to attach
+              <FileImage size={15} /> Drop files to attach
             </div>
           </div>
         )}
 
-        {images.length > 0 && (
+        {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2.5 p-3 pb-1">
-            {images.map((img, i) => (
+            {attachments.map((a, i) => (
               <div
                 key={i}
-                className="group relative h-20 w-20 overflow-hidden rounded-2xl border border-border bg-[oklch(0.97_0_0)] shadow-sm transition hover:shadow-md"
+                className={`group relative h-20 ${a.mime.startsWith("image/") ? "w-20" : "w-44"} overflow-hidden rounded-2xl border border-border bg-[oklch(0.97_0_0)] shadow-sm transition hover:shadow-md`}
               >
-                <img src={img.dataUrl} alt={img.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/55 to-transparent" />
-                <span className="pointer-events-none absolute bottom-1 left-1.5 right-7 truncate text-[10px] font-medium text-white">
-                  {img.name}
-                </span>
+                {a.mime.startsWith("image/") ? (
+                  <img src={a.previewUrl ?? a.url} alt={a.name} className="h-full w-full object-cover transition group-hover:scale-105" />
+                ) : (
+                  <div className="flex h-full items-center gap-2 px-3">
+                    <FileText size={20} className="shrink-0 text-foreground/70" />
+                    <span className="truncate text-xs font-medium text-foreground">{a.name}</span>
+                  </div>
+                )}
                 <button
-                  onClick={() => setImages((p) => p.filter((_, j) => j !== i))}
+                  onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
                   className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition hover:bg-foreground hover:text-background"
-                  aria-label="Remove image"
+                  aria-label="Remove"
                 >
                   <X size={12} strokeWidth={2.5} />
                 </button>
               </div>
             ))}
-            {images.length < MAX_IMAGES && (
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="grid h-20 w-20 place-items-center rounded-2xl border border-dashed border-border bg-[oklch(0.98_0_0)] text-muted-foreground transition hover:border-foreground/40 hover:bg-[oklch(0.96_0_0)] hover:text-foreground"
-                aria-label="Add image"
-              >
-                <Plus size={20} />
-              </button>
-            )}
           </div>
         )}
 
         <textarea
           ref={taRef}
           value={text}
+          dir={dir}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -143,37 +160,92 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
             }
           }}
           rows={1}
-          placeholder={luxe ? "Temporary HalaGPT" : "Ask HalaGPT anything…"}
+          placeholder={luxe ? "Temporary" : "Ask HalaGPT anything…"}
           className={`block w-full resize-none bg-transparent px-5 pt-4 pb-2 text-[15px] leading-6 outline-none ${
             luxe ? "placeholder:text-white/40" : "placeholder:text-muted-foreground"
-          }`}
+          } ${dir === "rtl" ? "text-right" : ""}`}
         />
 
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-1">
+          <div className="flex items-center gap-1.5 relative" ref={menuRef}>
+            {/* + menu */}
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={images.length >= MAX_IMAGES}
-              className={`group grid h-9 w-9 place-items-center rounded-full border transition disabled:opacity-40 disabled:cursor-not-allowed ${
+              onClick={() => setMenuOpen((o) => !o)}
+              className={`group grid h-9 w-9 place-items-center rounded-full border transition ${
                 luxe
                   ? "border-white/25 bg-transparent text-white hover:bg-white hover:text-black"
                   : "border-border bg-background text-foreground hover:bg-foreground hover:text-background hover:border-foreground"
               }`}
-              aria-label="Attach image"
-              title={`Attach image (${images.length}/${MAX_IMAGES})`}
+              aria-label="More actions"
+              aria-expanded={menuOpen}
             >
-              <Plus size={17} strokeWidth={2.25} className="transition group-hover:rotate-90 duration-300" />
+              <Plus size={17} strokeWidth={2.25} className={`transition duration-300 ${menuOpen ? "rotate-45" : "group-hover:rotate-90"}`} />
             </button>
-            {images.length > 0 && (
-              <span className={`text-[11px] font-medium ${luxe ? "text-white/60" : "text-muted-foreground"}`}>
-                {images.length}/{MAX_IMAGES}
-              </span>
+
+            {menuOpen && (
+              <div
+                className={`absolute bottom-12 left-0 z-40 w-64 overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl animate-rise ${
+                  luxe ? "border-white/15 bg-[oklch(0.18_0_0)]/95 text-white" : "border-border bg-background text-foreground"
+                }`}
+              >
+                <MenuItem
+                  icon={<Paperclip size={16} />}
+                  label="Attach files"
+                  hint="Image, PDF"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    fileRef.current?.click();
+                  }}
+                />
+                <MenuItem
+                  icon={<ImageIcon size={16} />}
+                  label="Create image"
+                  hint="Beta — coming soon"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onImageRequest?.();
+                  }}
+                />
+                <MenuItem
+                  icon={<Globe size={16} />}
+                  label="Search the web"
+                  hint={search ? "On" : "Off"}
+                  active={search}
+                  onClick={() => {
+                    setSearch((s) => !s);
+                    setMenuOpen(false);
+                  }}
+                />
+                <MenuItem
+                  icon={<Brain size={16} />}
+                  label="Deep Think"
+                  hint={deepThink ? "On" : "Off"}
+                  active={deepThink}
+                  onClick={() => {
+                    setDeepThink((d) => !d);
+                    setMenuOpen(false);
+                  }}
+                />
+              </div>
             )}
+
+            {/* Sticky pill indicators */}
+            {(deepThink || search) && (
+              <div className="ml-1 flex items-center gap-1.5">
+                {deepThink && <ModePill icon={<Brain size={12} />} label="Deep Think" onClear={() => setDeepThink(false)} luxe={luxe} />}
+                {search && <ModePill icon={<Globe size={12} />} label="Search" onClear={() => setSearch(false)} luxe={luxe} />}
+              </div>
+            )}
+
+            {uploading && (
+              <span className={`text-[11px] font-medium ${luxe ? "text-white/60" : "text-muted-foreground"}`}>uploading…</span>
+            )}
+
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPT}
               multiple
               hidden
               onChange={(e) => {
@@ -182,6 +254,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
               }}
             />
           </div>
+
           {loading ? (
             <button
               onClick={onStop}
@@ -195,7 +268,7 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
           ) : (
             <button
               onClick={submit}
-              disabled={!text.trim() && images.length === 0}
+              disabled={(!text.trim() && attachments.length === 0) || uploading}
               className={`grid h-9 w-9 place-items-center rounded-full transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-25 ${
                 luxe ? "bg-white text-[#000]" : "bg-foreground text-background"
               }`}
@@ -210,5 +283,60 @@ export function Composer({ onSend, loading, onStop, luxe = false }: Props) {
         HalaGPT can make mistakes. Verify important information.
       </p>
     </div>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  hint,
+  onClick,
+  active,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  onClick?: () => void;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm transition hover:bg-accent/40"
+    >
+      <span className="inline-flex items-center gap-3">
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-foreground/5">{icon}</span>
+        <span className="font-medium">{label}</span>
+      </span>
+      <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+        {active && <Check size={12} />}
+        {hint}
+      </span>
+    </button>
+  );
+}
+
+function ModePill({
+  icon,
+  label,
+  onClear,
+  luxe,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClear: () => void;
+  luxe: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+        luxe ? "border-white/30 bg-white/10 text-white" : "border-foreground/15 bg-foreground/5 text-foreground"
+      }`}
+    >
+      {icon} {label}
+      <button onClick={onClear} className="-mr-1 ml-1 rounded-full p-0.5 hover:bg-foreground/10" aria-label={`Disable ${label}`}>
+        <X size={10} />
+      </button>
+    </span>
   );
 }
