@@ -1,368 +1,362 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { PanelLeft, MessageSquareDashed } from "lucide-react";
-import { Sidebar } from "@/components/chat/Sidebar";
-import { Composer } from "@/components/chat/Composer";
-import { ChatView } from "@/components/chat/ChatView";
-import type { ChatImage, ChatMessage, Conversation, Project } from "@/components/chat/types";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Eye,
+  Code2,
+  Sparkles,
+  Globe,
+  Brain,
+  ShieldCheck,
+  Languages,
+  MessageSquare,
+  Zap,
+} from "lucide-react";
+import logoUrl from "@/assets/halagpt-logo.png";
 
 export const Route = createFileRoute("/")({
-  component: HalaGPT,
+  component: Home,
   head: () => ({
     meta: [
-      { title: "HALA GPT — Luxe AI Assistant" },
+      { title: "Hala AI" },
       {
         name: "description",
-        content:
-          "HALA GPT is a refined AI assistant for conversation, vision and image OCR, code, math, and rich markdown — minimal monochrome design.",
+        content: "Hala is a Palestinian AI from Palestine.",
       },
-      { property: "og:title", content: "HALA GPT — Luxe AI Assistant" },
+      { property: "og:title", content: "Hala AI" },
       {
         property: "og:description",
-        content: "Refined AI chat with image OCR, code, math and elegant markdown.",
+        content: "Hala is a Palestinian AI from Palestine.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "/" },
     ],
     links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Hala AI",
+          url: "/",
+          logo: "/halagpt-logo.png",
+          description: "Hala is a Palestinian AI from Palestine.",
+        }),
+      },
+    ],
   }),
 });
 
-const STORAGE_KEY = "halagpt:conversations:v1";
-const PROJECTS_KEY = "halagpt:projects:v1";
-
-function uid() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function loadJson<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function HalaGPT() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [temporary, setTemporary] = useState(false);
-
-  useEffect(() => {
-    const c = loadJson<Conversation[]>(STORAGE_KEY, []);
-    setConversations(c);
-    setProjects(loadJson<Project[]>(PROJECTS_KEY, []));
-    if (c.length > 0) setActiveId(c[0].id);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  }, [projects]);
-
-  const active = useMemo(
-    () => conversations.find((c) => c.id === activeId) ?? null,
-    [conversations, activeId],
-  );
-
-  const isEmpty = !active || active.messages.length === 0;
-
-  const newChat = () => {
-    setActiveId(null);
-    setTemporary(false);
-  };
-
-  const deleteChat = (id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    if (activeId === id) setActiveId(null);
-  };
-
-  const renameChat = (id: string, title: string) =>
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, title } : c)));
-  const togglePin = (id: string) =>
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)));
-  const toggleArchive = (id: string) => {
-    setConversations((prev) => prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c)));
-    if (activeId === id) setActiveId(null);
-  };
-  const createProject = (p: Omit<Project, "id" | "createdAt">) =>
-    setProjects((prev) => [{ id: uid(), createdAt: Date.now(), ...p }, ...prev]);
-
-  const callApi = async (msgs: ChatMessage[]): Promise<string> => {
-    const payload = {
-      messages: msgs.map((m) => {
-        if (m.role === "user" && m.images && m.images.length > 0) {
-          return {
-            role: "user" as const,
-            content: [
-              ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
-              ...m.images.map((img) => ({
-                type: "image_url" as const,
-                image_url: { url: img.dataUrl },
-              })),
-            ],
-          };
-        }
-        return { role: m.role, content: m.content };
-      }),
-    };
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = (await res.json()) as { content?: string; error?: string };
-    if (!res.ok) throw new Error(data.error || "Request failed");
-    return data.content ?? "";
-  };
-
-  const send = async (text: string, images: ChatImage[]) => {
-    let convo = active;
-    if (!convo) {
-      convo = {
-        id: uid(),
-        title: text.slice(0, 40) || "New chat",
-        messages: [],
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      if (!temporary) setConversations((prev) => [convo!, ...prev]);
-      setActiveId(convo.id);
-    }
-
-    const userMsg: ChatMessage = {
-      id: uid(),
-      role: "user",
-      content: text,
-      images: images.length > 0 ? images : undefined,
-      createdAt: Date.now(),
-    };
-    const placeholder: ChatMessage = {
-      id: uid(),
-      role: "assistant",
-      content: "",
-      createdAt: Date.now(),
-    };
-
-    const baseMessages = [...convo.messages, userMsg];
-    const isFirst = convo.messages.length === 0;
-    const targetId = convo.id;
-
-    if (temporary) {
-      // local-only ephemeral conversation
-      setConversations((prev) => {
-        const exists = prev.some((c) => c.id === targetId);
-        const next: Conversation = {
-          ...convo!,
-          messages: [...baseMessages, placeholder],
-          title: isFirst ? text.slice(0, 40) || "Temporary" : convo!.title,
-          updatedAt: Date.now(),
-        };
-        return exists ? prev.map((c) => (c.id === targetId ? next : c)) : [next, ...prev];
-      });
-    } else {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: [...baseMessages, placeholder],
-                title: isFirst ? text.slice(0, 40) || "New chat" : c.title,
-                updatedAt: Date.now(),
-              }
-            : c,
-        ),
-      );
-    }
-
-    setLoading(true);
-    try {
-      const reply = await callApi(baseMessages);
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: reply } : m,
-                ),
-                updatedAt: Date.now(),
-              }
-            : c,
-        ),
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Error";
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m,
-                ),
-              }
-            : c,
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const regenerate = async () => {
-    if (!active || loading) return;
-    const targetId = active.id;
-    const msgs = [...active.messages];
-    while (msgs.length && msgs[msgs.length - 1].role === "assistant") msgs.pop();
-    if (msgs.length === 0 || msgs[msgs.length - 1].role !== "user") return;
-
-    const placeholder: ChatMessage = {
-      id: uid(),
-      role: "assistant",
-      content: "",
-      createdAt: Date.now(),
-    };
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === targetId
-          ? { ...c, messages: [...msgs, placeholder], updatedAt: Date.now() }
-          : c,
-      ),
-    );
-
-    setLoading(true);
-    try {
-      const reply = await callApi(msgs);
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: reply } : m,
-                ),
-                updatedAt: Date.now(),
-              }
-            : c,
-        ),
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Error";
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetId
-            ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === placeholder.id ? { ...m, content: `⚠️ ${msg}` } : m,
-                ),
-              }
-            : c,
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function Home() {
   return (
-    <div
-      className={`relative flex h-dvh w-full overflow-hidden text-foreground transition-colors duration-500 ${
-        temporary ? "bg-black" : "bg-background"
-      }`}
-    >
-      {/* Pure incognito ambient layer */}
-      {temporary && (
-        <div className="pointer-events-none absolute inset-0 bg-black" />
-      )}
-
-      <Sidebar
-        conversations={conversations}
-        projects={projects}
-        activeId={activeId}
-        onSelect={(id) => {
-          setActiveId(id);
-          setTemporary(false);
-        }}
-        onNew={newChat}
-        onDelete={deleteChat}
-        onRename={renameChat}
-        onTogglePin={togglePin}
-        onToggleArchive={toggleArchive}
-        onCreateProject={createProject}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((o) => !o)}
-      />
-
-      <main className={`relative z-[1] flex min-w-0 flex-1 flex-col ${temporary ? "text-[oklch(0.98_0_0)]" : ""}`}>
-        {/* Floating controls */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pt-4">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
-              temporary
-                ? "border-white/15 bg-white/10 text-white hover:bg-white/15"
-                : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
-            }`}
-            aria-label="Open sidebar"
+    <div className="min-h-dvh bg-background text-foreground">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+          <Link to="/" className="flex items-center gap-2.5">
+            <img src={logoUrl} alt="" className="h-7 w-7" />
+            <span className="text-lg font-semibold tracking-tight">HalaGPT</span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+            <a href="#features" className="hover:text-foreground">Features</a>
+            <a href="#pricing" className="hover:text-foreground">Pricing</a>
+            <a href="#about" className="hover:text-foreground">About</a>
+            <a href="#faq" className="hover:text-foreground">FAQ</a>
+          </nav>
+          <Link
+            to="/chat"
+            className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
           >
-            <PanelLeft size={18} />
-          </button>
-          <button
-            onClick={() => {
-              setTemporary((t) => !t);
-              setActiveId(null);
-            }}
-            className={`pointer-events-auto grid h-11 w-11 place-items-center rounded-full border shadow-[0_6px_20px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl transition active:scale-95 ${
-              temporary
-                ? "border-white/30 bg-white text-[#000]"
-                : "border-border bg-background/85 text-foreground hover:bg-[oklch(0.97_0_0)]"
-            }`}
-            aria-label="Temporary chat"
-            aria-pressed={temporary}
-            title="Temporary chat"
-          >
-            <MessageSquareDashed size={18} />
-          </button>
+            Start chat <ArrowRight size={15} />
+          </Link>
         </div>
+      </header>
 
-        {/* Temporary chat title — just the name, nothing else */}
-        {isEmpty && temporary && (
-          <div className="pointer-events-none absolute inset-x-0 top-[24vh] z-0 flex justify-center">
-            <h2 className="text-[24px] font-medium tracking-tight text-white/90">Temporary HALA</h2>
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(60% 50% at 50% 0%, oklch(0.97 0 0) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-5xl px-5 pt-24 pb-20 text-center">
+          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
+            Made with love in Palestine
           </div>
-        )}
+          <h1 className="text-balance text-5xl font-semibold tracking-tight md:text-7xl">
+            Meet <span className="italic">Hala</span> — a Palestinian AI,
+            <br className="hidden md:block" /> built for everyone.
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground md:text-xl">
+            Chat, search the web, read text from images, write code, reason
+            deeply — in any language. Refined, fast, and yours.
+          </p>
+          <div className="mt-9 flex items-center justify-center gap-3">
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background shadow-[0_18px_45px_-15px_rgba(0,0,0,0.5)] transition hover:opacity-90 active:scale-[0.98]"
+            >
+              Start chat <ArrowRight size={16} />
+            </Link>
+            <a
+              href="#features"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3.5 text-[15px] font-medium text-foreground transition hover:bg-[oklch(0.97_0_0)]"
+            >
+              See what she can do
+            </a>
+          </div>
+        </div>
+      </section>
 
-        {/* Chat scroll area */}
-        <div className={`flex-1 overflow-y-auto transition-opacity duration-300 ${isEmpty ? "opacity-0" : "opacity-100"}`}>
-          <ChatView
-            messages={active?.messages ?? []}
-            loading={loading}
-            onRegenerate={regenerate}
+      {/* Features */}
+      <section id="features" className="mx-auto max-w-6xl px-5 py-24">
+        <div className="mb-14 max-w-2xl">
+          <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+            One assistant. Everything you need.
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Hala combines reasoning, vision, search, and code into a single
+            calm interface. No clutter, no menus to learn.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Feature
+            icon={<Brain size={20} />}
+            title="Deep reasoning"
+            body="Step-by-step thinking on demand for hard problems — math, logic, long documents, plans."
+          />
+          <Feature
+            icon={<Eye size={20} />}
+            title="Vision & OCR"
+            body="Read text from any image — handwriting, screenshots, receipts. Translate and summarize."
+          />
+          <Feature
+            icon={<Globe size={20} />}
+            title="Live web search"
+            body="Pull current answers from the web with sources you can verify."
+          />
+          <Feature
+            icon={<Code2 size={20} />}
+            title="Code that runs"
+            body="Write, debug and explain code in 40+ languages with copyable code blocks."
+          />
+          <Feature
+            icon={<Languages size={20} />}
+            title="Truly multilingual"
+            body="Speak any language. Arabic and other RTL scripts render natively, right-to-left."
+          />
+          <Feature
+            icon={<ShieldCheck size={20} />}
+            title="Private by design"
+            body="Server-verified sessions, encrypted at rest, no training on your conversations."
           />
         </div>
+      </section>
 
-        {/* Composer — centered when empty, slides to bottom when chat starts */}
-        <div
-          className={`relative z-10 transition-all duration-500 ease-out ${
-            isEmpty ? "-translate-y-[20vh]" : "translate-y-0"
-          }`}
-        >
-          <Composer onSend={send} loading={loading} luxe={temporary} />
+      {/* Pricing */}
+      <section
+        id="pricing"
+        className="border-t border-border/60 bg-[oklch(0.985_0_0)]"
+      >
+        <div className="mx-auto max-w-6xl px-5 py-24">
+          <div className="mb-14 text-center">
+            <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+              Simple pricing. Half of the other guy.
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Start free. Upgrade when you need more.
+            </p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            <PriceCard
+              name="Free"
+              price="$0"
+              note="forever"
+              features={[
+                "Standard chat",
+                "Limited images per day",
+                "Limited web search",
+                "Markdown & code blocks",
+              ]}
+            />
+            <PriceCard
+              name="Plus"
+              price="$10"
+              note="per month"
+              featured
+              features={[
+                "Everything in Free",
+                "Higher message limits",
+                "Deep reasoning",
+                "More images & OCR",
+                "Priority response speed",
+              ]}
+            />
+            <PriceCard
+              name="Pro"
+              price="$20"
+              note="per month"
+              features={[
+                "Everything in Plus",
+                "Near-unlimited usage",
+                "Largest context",
+                "Early access to new models",
+              ]}
+            />
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* About */}
+      <section id="about" className="mx-auto max-w-4xl px-5 py-24 text-center">
+        <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+          A small AI with a big home.
+        </h2>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
+          Hala is built in Palestine, for anyone in the world. We believe great
+          AI should feel warm, honest, and useful — not loud, not pushy.
+          That&apos;s what we&apos;re building.
+        </p>
+        <div className="mt-10 flex justify-center">
+          <Link
+            to="/chat"
+            className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-[15px] font-medium text-background transition hover:opacity-90 active:scale-[0.98]"
+          >
+            Say hi to Hala <ArrowRight size={16} />
+          </Link>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t border-border/60">
+        <div className="mx-auto max-w-3xl px-5 py-24">
+          <h2 className="text-4xl font-semibold tracking-tight md:text-5xl">
+            Questions, answered.
+          </h2>
+          <div className="mt-10 space-y-2">
+            <Faq q="Is HalaGPT free?" a="Yes. The free tier covers most everyday questions, with limits on advanced features." />
+            <Faq q="What languages does Hala speak?" a="Any. Arabic, English, French, Spanish, Turkish, Urdu, Hebrew, Russian, Chinese, Hindi — and more. RTL languages render right-to-left automatically." />
+            <Faq q="Can Hala read text from images?" a="Yes. Upload a photo, screenshot, or scan — Hala extracts the text, translates, or summarizes it." />
+            <Faq q="Are my chats private?" a="Your conversations stay yours. Sessions are server-verified, data is encrypted, and we don't train on your chats." />
+            <Faq q="Why is it cheaper than other assistants?" a="Because it should be. Plus is $10/month — half the typical price — without giving up quality." />
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border/60">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-10 text-sm text-muted-foreground md:flex-row">
+          <div className="flex items-center gap-2.5">
+            <img src={logoUrl} alt="" className="h-5 w-5" />
+            <span>HalaGPT — Palestinian AI from Palestine.</span>
+          </div>
+          <div className="flex items-center gap-5">
+            <a href="#features" className="hover:text-foreground">Features</a>
+            <a href="#pricing" className="hover:text-foreground">Pricing</a>
+            <a href="#faq" className="hover:text-foreground">FAQ</a>
+            <Link to="/chat" className="hover:text-foreground">Chat</Link>
+          </div>
+        </div>
+      </footer>
     </div>
+  );
+}
+
+function Feature({
+  icon,
+  title,
+  body,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="group rounded-3xl border border-border bg-background p-6 transition hover:bg-[oklch(0.98_0_0)]">
+      <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[oklch(0.96_0_0)] text-foreground transition group-hover:bg-foreground group-hover:text-background">
+        {icon}
+      </div>
+      <h3 className="mt-5 text-lg font-semibold tracking-tight">{title}</h3>
+      <p className="mt-2 text-[15px] leading-7 text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
+function PriceCard({
+  name,
+  price,
+  note,
+  features,
+  featured,
+}: {
+  name: string;
+  price: string;
+  note: string;
+  features: string[];
+  featured?: boolean;
+}) {
+  return (
+    <div
+      className={`relative rounded-3xl border p-7 ${
+        featured
+          ? "border-foreground bg-foreground text-background shadow-[0_30px_60px_-25px_rgba(0,0,0,0.55)]"
+          : "border-border bg-background text-foreground"
+      }`}
+    >
+      {featured && (
+        <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-background px-3 py-1 text-[11px] font-semibold text-foreground shadow">
+          <Sparkles size={11} /> Most popular
+        </span>
+      )}
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-xl font-semibold tracking-tight">{name}</h3>
+        <Zap
+          size={16}
+          className={featured ? "text-background/70" : "text-muted-foreground"}
+        />
+      </div>
+      <div className="mt-4 flex items-baseline gap-1.5">
+        <span className="text-5xl font-semibold tracking-tight">{price}</span>
+        <span className={featured ? "text-background/70" : "text-muted-foreground"}>
+          /{note.replace("per ", "")}
+        </span>
+      </div>
+      <ul className="mt-6 space-y-2.5 text-[15px]">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5">
+            <MessageSquare size={14} className="mt-1 shrink-0 opacity-70" />
+            {f}
+          </li>
+        ))}
+      </ul>
+      <Link
+        to="/chat"
+        className={`mt-7 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-[15px] font-medium transition ${
+          featured
+            ? "bg-background text-foreground hover:opacity-90"
+            : "bg-foreground text-background hover:opacity-90"
+        }`}
+      >
+        Get started <ArrowRight size={15} />
+      </Link>
+    </div>
+  );
+}
+
+function Faq({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group rounded-2xl border border-border bg-background px-5 py-4 open:bg-[oklch(0.985_0_0)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[16px] font-medium">
+        {q}
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-[oklch(0.96_0_0)] text-foreground transition group-open:rotate-45">
+          +
+        </span>
+      </summary>
+      <p className="mt-3 text-[15px] leading-7 text-muted-foreground">{a}</p>
+    </details>
   );
 }

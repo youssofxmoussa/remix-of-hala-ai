@@ -100,7 +100,7 @@ export function Sidebar({
           <div className="flex items-center justify-between px-5 pt-6 pb-2">
             <div className="flex items-center gap-2.5">
               <img src={logoUrl} alt="" className="h-7 w-7" />
-              <h1 className="text-2xl font-semibold tracking-tight">HALA</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">HalaGPT</h1>
             </div>
             <div className="flex items-center gap-1 rounded-full bg-[oklch(0.96_0_0)] px-1 py-1">
               <button
@@ -478,7 +478,7 @@ function ImagesPanel({
         </div>
         <h3 className="mt-5 text-[22px] font-semibold tracking-tight">No images yet</h3>
         <p className="mt-2 max-w-xs text-[15px] text-muted-foreground">
-          Every image you share with HALA shows up here
+          Every image you share with HalaGPT shows up here
         </p>
       </div>
     );
