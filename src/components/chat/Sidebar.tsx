@@ -478,7 +478,7 @@ function ImagesPanel({
         </div>
         <h3 className="mt-5 text-[22px] font-semibold tracking-tight">No images yet</h3>
         <p className="mt-2 max-w-xs text-[15px] text-muted-foreground">
-          Every image you share with HALA shows up here
+          Every image you share with HalaGPT shows up here
         </p>
       </div>
     );
