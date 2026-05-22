@@ -24,7 +24,7 @@ function NotFoundComponent() {
             to="/"
             className="inline-flex items-center justify-center rounded-xl bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:opacity-90"
           >
-            Back to HALA GPT
+            Back to HalaGPT
           </Link>
         </div>
       </div>
@@ -62,27 +62,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#ffffff" },
-      { title: "HALA GPT" },
-      {
-        name: "description",
-        content:
-          "HALA GPT — Palestinian AI",
-      },
-      { name: "keywords", content: "HALA GPT, AI assistant, chat AI, image OCR, vision AI, luxe AI" },
-      { name: "author", content: "HALA GPT" },
+      { title: "Hala AI" },
+      { name: "description", content: "Hala is a Palestinian AI from Palestine." },
       { name: "robots", content: "index, follow" },
-      { property: "og:site_name", content: "HALA GPT" },
-      { property: "og:title", content: "HALA GPT — Luxe AI Assistant" },
-      { property: "og:description", content: "Refined AI chat with vision, OCR, math and elegant markdown." },
+      { property: "og:site_name", content: "Hala AI" },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/og-image.png" },
-      { property: "og:image:width", content: "1280" },
-      { property: "og:image:height", content: "704" },
-      { property: "og:locale", content: "ar_SA" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "HALA GPT — Luxe AI Assistant" },
-      { name: "twitter:description", content: "Refined AI chat with vision, OCR, math and elegant markdown." },
-      { name: "twitter:image", content: "/og-image.png" },
       { name: "format-detection", content: "telephone=no" },
     ],
     links: [
@@ -90,21 +75,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", href: "/halagpt-logo.png" },
       { rel: "apple-touch-icon", href: "/halagpt-logo.png" },
       { rel: "preconnect", href: "https://api.groq.com" },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebApplication",
-          name: "HALA GPT",
-          description:
-            "Luxe AI assistant for chat, vision, image OCR, math and markdown.",
-          applicationCategory: "AIApplication",
-          operatingSystem: "Any",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-        }),
-      },
     ],
   }),
   shellComponent: RootShell,
