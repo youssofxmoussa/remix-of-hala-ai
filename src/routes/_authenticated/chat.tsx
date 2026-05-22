@@ -6,7 +6,7 @@ import { Composer } from "@/components/chat/Composer";
 import { ChatView } from "@/components/chat/ChatView";
 import type { ChatImage, ChatMessage, Conversation, Project } from "@/components/chat/types";
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/_authenticated/chat")({
   component: HalaGPTChat,
   head: () => ({
     meta: [
