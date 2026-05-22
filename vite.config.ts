@@ -1,17 +1,22 @@
 import { defineConfig } from "vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import viteReact from "@vitejs/plugin-react";
-import tsConfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "@tailwindcss/vite";
+  import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+  import viteReact from "@vitejs/plugin-react";
+  import tsConfigPaths from "vite-tsconfig-paths";
+  import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig({
-  plugins: [
-    tsConfigPaths(),
-    tailwindcss(),
-    tanstackStart(),
-    viteReact(),
-  ],
-  resolve: {
-    dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
-  },
-});
+  export default defineConfig({
+    plugins: [
+      tsConfigPaths(),
+      tailwindcss(),
+      tanstackStart({
+        server: {
+          preset: "vercel",
+        },
+      }),
+      viteReact(),
+    ],
+    resolve: {
+      dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
+    },
+  });
+  
